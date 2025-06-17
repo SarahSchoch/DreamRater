@@ -1,0 +1,233 @@
+/* General Styles */
+body {
+  font-family: Arial, sans-serif;
+}
+
+h1 {
+  text-align: center;
+}
+
+/* Layout Styles */
+.container {
+  display: flex;
+}
+
+.sidebar {
+  width: 25%;
+  padding: 8px;
+  background-color: #f5f5f5;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebar h3 {
+  font-size: 1em;
+  margin: 0 0 8px;
+}
+
+.sidebar h3:not(:first-child) {
+  margin-top: 16px;
+}
+
+.main-content {
+  width: 75%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+/* Sticky Header */
+.sticky-header {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  background-color: white;
+  z-index: 1000;
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+
+/* Navigation Buttons and Dropdown */
+.navigation-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navigation-buttons button {
+  padding: 8px 16px;
+  margin: 0;
+}
+
+.reports-dropdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 0 16px; /* Add margin to the left of the dropdown */
+}
+
+.reports-dropdown h3 {
+  margin: 0;
+  font-size: 0.9em;
+}
+
+.reports-dropdown select {
+  width: auto; /* Remove fixed width */
+  min-width: 200px; /* Set minimum width */
+  padding: 5px;
+  font-size: 0.9em;
+}
+
+/* Put buttons and dropdown in one line */
+.sticky-header .navigation-buttons,
+.sticky-header .reports-dropdown {
+  display: inline-flex;
+}
+
+/* Dream Report Container */
+.report-container {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  background-color: white;
+  z-index: 900;
+}
+
+.dream-report {
+  flex: 1;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 4px;
+  max-height: 32vh;
+  overflow-y: auto;
+}
+
+.dream-report h5 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1em;
+}
+
+/* Sticky Header */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  background-color: white;
+  z-index: 1000;
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+
+#dream_report_title {
+  margin: 8px 0;
+  background-color: white;
+}
+
+/* Dynamic Scales */
+#dynamic_scales {
+  margin-top: 20px;
+}
+
+#dynamic_scales {
+  
+}
+
+#dynamic_scales > div:has(> .group-container) {
+  grid-column: 1 / -1;
+}
+
+.slider-container {
+  margin-bottom: 20px;
+}
+
+.slider-container h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.group-container {
+  border: 1px solid #007bff;
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  background-color: #e9f5ff;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.group-container h3 {
+  font-size:1em;
+  font-weight:normal;
+  margin: 0;
+}
+
+.group-container button {
+  height: 32px;
+  display: inline-block;
+  width: min-content;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  margin-left: auto;
+}
+.group-container .scales-grid-inner {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: inherit;
+}
+.rating-type-label{
+  font-weight:bold;
+  margin-bottom:8px;
+  display:block;
+}
+
+.rating-type-label {
+  position: relative; 
+}
+.rating-type-label:after {
+  position: absolute;
+  display: none;
+  border-radius: 2px;
+  padding: 4px;
+  font-size: 0.8em;
+  font-weight: normal;
+  bottom: 100%;
+  max-width: 100%;
+  left: 0;
+  background: white;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.rating-type-label:hover:after {
+  display: block;
+  opacity: 1;
+}
+.rating-type-label--lastmin:hover:after {
+  content: 'This applies to "last minute" only!';
+}
+
+.rating-type-label--full:hover:after {
+  content: 'This applies to both "earlier" and "last minute"';
+}
+
+.rating-type-label rating-type-label--full{
+  /*if you want to add styling separately add it here*/
+}
+.rating-type-label rating-type-label--lastmin{
+  /*if you want to add styling separately add it here*/
+}
+
+.separated-scales{
+  display:grid;
+  gap:8px;
+  grid-template-columns:1fr 1fr;
+  margin-top:4px;
+}
+
+.scale-name{
+  font-size:1.2em;
+}

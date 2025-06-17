@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>DreamRaterv2</title>
+  <link rel="stylesheet" href="./style.css">
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<div id="app">
+  <!-- App Title -->
+  <h1>DreamRater</h1>
+
+  <!-- Layout Container -->
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <!-- File Uploads -->
+      <div>
+        <h3>Upload Rating Scales File (.xlsx or .csv)</h3>
+        <input type="file" @change="handleScaleFile" accept=".xlsx, .csv">
+      </div>
+      <div v-if="scaleFileLoaded">
+        <h3>Upload Dream Reports File (.xlsx)</h3>
+        <input type="file" @change="handleReportFile" accept=".xlsx">
+      </div>
+      <div v-if="reportFileLoaded">
+        <h3>Enter your name</h3>
+        <input type="text" v-model="username" placeholder="Enter your name">
+        <h3>Import Existing Ratings File (.csv)</h3>
+        <input :disabled="!username" type="file" @change="handleRatingFile" accept=".csv">
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- When Reports are Loaded -->
+      <div v-if="reportFileLoaded">
+        <!-- Sticky Header Start -->
+        <div class="sticky-header">
+          <div style="display: flex; align-items: center;">
+            <div class="navigation-buttons">
+              <button @click="previousReport" :disabled="currentReportIndex === 0">Previous</button>
+              <button @click="nextReport" :disabled="currentReportIndex === dreamReports.length - 1">Next</button>
+              <button @click="saveAllRatingsToCSV">Save and Download</button>
+            </div>
+            <div class="reports-dropdown">
+              <h3>Select Report:</h3>
+              <select v-model="currentReportIndex" @change="onReportSelect">
+                <option v-for="(reportGroup, index) in dreamReports" :value="index" :key="reportGroup.ID">
+                  Report ID: {{ reportGroup.ID }} - {{ getRatingStatus(reportGroup.ID) }}
+                </option>
+              </select>
+            </div>
+            <div class="save-message">{{ saveMessage }}</div>
+          </div>
+          <!-- Dream Report Display -->
+          <h4 id="dream_report_title">
+            Currently Rating Report ID: {{ currentReport.ID || 'No report selected' }}
+            <span> - {{ ratingStatus }}</span>
+          </h4>
+          <div id="dream_report_container" class="report-container">
+            <div v-for="(report, index) in reversedReports" :key="index" class="dream-report">
+              <h5>{{ getReportLabel(index) }}</h5>
+              <div>{{ report.Report }}</div>
+            </div>
+          </div>
+        </div>
+        <!-- Sticky Header End -->
+
+        <!-- Dynamic Scales -->
+        <div id="dynamic_scales">
+          <div v-for="(item, index) in renderedScales" :key="index">
+            <!-- Grouped Scales -->
+            <div v-if="item.isGroup" class="group-container">
+              <h3>Group: {{ item.groupName }}</h3>
+              <button @click="setGroupToZero(item.groupName)">Set Group {{ item.groupName }} to Zero</button>
+              <div class="scales-grid-inner">
+                <div v-for="scale in item.scales" :key="scale.ScaleName" class="slider-container">
+                  <h4 class="scale-name" :title="scale.Explanation">{{ scale.ScaleName }}</h4>
+
+                  <!-- Combined Rating Type -->
+                  <div v-if="scale.RatingType === 'combined' && hasLastMinutePortion">
+                    <div v-for="option in getCombinedOptions()" :key="option.value">
+                      <label>
+                        <input type="radio" :name="'combined-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.combined[scale.ScaleName]">
+                        {{ option.label }}
+                      </label>
+                    </div>
+                  </div>
+                  <!-- Combined Binary Rating Type -->
+                  <div v-else-if="scale.RatingType === 'combinedBinary' && hasLastMinutePortion">
+                    <!-- First the combined radio options -->
+                    <div class="combined-options">
+                      <div v-for="option in getCombinedOptions()" :key="option.value">
+                        <label>
+                          <input type="radio" :name="'combined-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.combined[scale.ScaleName]">
+                          {{ option.label }}
+                        </label>
+                      </div>
+                    </div>
+                    <!-- Then the additional checkbox -->
+                    <div class="binary-flag">
+                      <label>
+                        <input type="checkbox" v-model="scaleInputs.binaryFlags[scale.ScaleName]" @change="handleBinaryCheckboxChange(scale.ScaleName)">
+                        Dream Person is Eating
+                      </label>
+                    </div>
+                  </div>
+                  <!-- Main Only Rating Type -->
+                  <div class="rating-type-both" v-else-if="scale.RatingType === 'mainOnly' && hasLastMinutePortion">
+                    <div v-if="scale.ScaleType === 'Radio'">
+                      <div v-for="(option, idx) in parseOptions(scale.Options)" :key="idx">
+                        <label>
+                          <input type="radio" :name="'main-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.main[scale.ScaleName]">
+                          {{ option.label }}
+                        </label>
+                      </div>
+                    </div>
+                    <div v-else-if="scale.ScaleType === 'Numeric'">
+                      <label>Number in full dream:</label>
+                      <input type="number" v-model.number="scaleInputs.main[scale.ScaleName]">
+                    </div>
+                  </div>
+
+                  <!-- Count to Binary Rating Type -->
+                  <div v-else-if="scale.RatingType === 'countToBinary' && hasLastMinutePortion">
+                    <div>
+                      <label>Number in full dream:</label>
+                      <input type="number" v-model.number="scaleInputs.main[scale.ScaleName]" @change="handleCountToBinaryChange(scale.ScaleName)">
+                    </div>
+                    <div>
+                      <label>Present in last minute:</label>
+                      <input type="checkbox" :checked="scaleInputs.lastMinute[scale.ScaleName] === '1'" @change="e => handleLastMinuteCheckboxChange(scale.ScaleName, e)">
+                    </div>
+                  </div>
+
+                  <!-- Separate Rating Type -->
+                  <div class="separated-scales" v-else-if="scale.RatingType === 'separate' && hasLastMinutePortion">
+                    <div>
+                      <label class="rating-type-label rating-type-label--full">Full Dream:</label>
+                      <div v-if="scale.ScaleType === 'Radio'">
+                        <div v-for="(option, idx) in parseOptions(scale.Options)" :key="idx">
+                          <label>
+                            <input type="radio" :name="'main-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.main[scale.ScaleName]">
+                            {{ option.label }}
+                          </label>
+                        </div>
+                      </div>
+                      <input v-else-if="scale.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.main[scale.ScaleName]">
+                    </div>
+                    <div>
+                      <label class="rating-type-label rating-type-label--lastmin">Last Minute:</label>
+                      <div v-if="scale.ScaleType === 'Radio'">
+                        <div v-for="(option, idx) in parseOptions(scale.Options)" :key="idx">
+                          <label>
+                            <input type="radio" :name="'lastMinute-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.lastMinute[scale.ScaleName]">
+                            {{ option.label }}
+                          </label>
+                        </div>
+                      </div>
+                      <input v-else-if="scale.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.lastMinute[scale.ScaleName]">
+                    </div>
+                  </div>
+
+                  <!-- Default Single Rating (for single dream reports) -->
+                  <div v-else>
+                    <div v-if="scale.ScaleType === 'Radio'">
+                      <div v-for="(option, idx) in parseOptions(scale.Options)" :key="idx">
+                        <label>
+                          <input type="radio" :name="'main-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.main[scale.ScaleName]">
+                          {{ option.label }}
+                        </label>
+                      </div>
+                    </div>
+                    <input v-else-if="scale.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.main[scale.ScaleName]">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ungrouped Scales (same structure as above but for individual scales) -->
+            <div v-else class="slider-container">
+              <div class="scales-grid-inner">
+                <h4 class="scale-name" :title="item.Explanation">{{ item.ScaleName }}</h4>
+
+                <!-- Combined Rating Type -->
+                <div v-if="item.RatingType === 'combined' && hasLastMinutePortion">
+                  <div v-for="option in getCombinedOptions()" :key="option.value">
+                    <label>
+                      <input type="radio" :name="'combined-'+item.ScaleName" :value="option.value" v-model="scaleInputs.combined[item.ScaleName]">
+                      {{ option.label }}
+                    </label>
+                  </div>
+                </div>
+                
+                <!-- Main Only Rating Type -->
+                <div class="rating-type-both" v-else-if="item.RatingType === 'mainOnly' && hasLastMinutePortion">
+                  <label class="rating-type-label rating-type-label--full">Full Dream:</label>
+                  <div v-if="item.ScaleType === 'Radio'">
+                    <div v-for="(option, idx) in parseOptions(item.Options)" :key="idx">
+                      <label>
+                        <input type="radio" :name="'main-'+item.ScaleName" :value="option.value" v-model="scaleInputs.main[item.ScaleName]">
+                        {{ option.label }}
+                      </label>
+                    </div>
+                  </div>
+                  <div v-else-if="item.ScaleType === 'Numeric'">
+                    <label>Number in full dream:</label>
+                    <input type="number" v-model.number="scaleInputs.main[item.ScaleName]">
+                  </div>
+                </div>
+
+                <!-- Count to Binary Rating Type -->
+                <div v-else-if="item.RatingType === 'countToBinary' && hasLastMinutePortion">
+                  <div>
+                    <label>Number in full dream:</label>
+                    <input type="number" v-model.number="scaleInputs.main[item.ScaleName]" @change="handleCountToBinaryChange(item.ScaleName)">
+                  </div>
+                  <div>
+                    <label>Present in last minute:</label>
+                    <input type="checkbox" :checked="scaleInputs.lastMinute[item.ScaleName] === '1'" @change="e => handleLastMinuteCheckboxChange(item.ScaleName, e)">
+                  </div>
+                </div>
+
+                <!-- Separate Rating Type -->
+                <div class="separated-scales" v-else-if="item.RatingType === 'separate' && hasLastMinutePortion">
+                  <div>
+                    <label class="rating-type-label rating-type-label--full">Full Dream:</label>
+                    <div v-if="item.ScaleType === 'Radio'">
+                      <div v-for="(option, idx) in parseOptions(item.Options)" :key="idx">
+                        <label>
+                          <input type="radio" :name="'main-'+item.ScaleName" :value="option.value" v-model="scaleInputs.main[item.ScaleName]">
+                          {{ option.label }}
+                        </label>
+                      </div>
+                    </div>
+                    <input v-else-if="item.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.main[item.ScaleName]">
+                  </div>
+                  <div>
+                    <label class="rating-type-label rating-type-label--lastmin">Last Minute:</label>
+                    <div v-if="item.ScaleType === 'Radio'">
+                      <div v-for="(option, idx) in parseOptions(item.Options)" :key="idx">
+                        <label>
+                          <input type="radio" :name="'lastMinute-'+item.ScaleName" :value="option.value" v-model="scaleInputs.lastMinute[item.ScaleName]">
+                          {{ option.label }}
+                        </label>
+                      </div>
+                    </div>
+                    <input v-else-if="item.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.lastMinute[item.ScaleName]">
+                  </div>
+                </div>
+
+                <!-- Default Single Rating (for single dream reports) -->
+                <div v-else>
+                  <div v-if="item.ScaleType === 'Radio'">
+                    <div v-for="(option, idx) in parseOptions(item.Options)" :key="idx">
+                      <label>
+                        <input type="radio" :name="'main-'+item.ScaleName" :value="option.value" v-model="scaleInputs.main[item.ScaleName]">
+                        {{ option.label }}
+                      </label>
+                    </div>
+                  </div>
+                  <input v-else-if="item.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.main[item.ScaleName]">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<!-- partial -->
+  <script src='https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js'></script>
+<script src='https://unpkg.com/vue@2'></script><script  src="./script.js"></script>
+
+</body>
+</html>
