@@ -1,4 +1,3 @@
-/* General Styles */
 body {
   font-family: Arial, sans-serif;
 }
@@ -7,7 +6,6 @@ h1 {
   text-align: center;
 }
 
-/* Layout Styles */
 .container {
   display: flex;
 }
@@ -37,7 +35,6 @@ h1 {
   box-sizing: border-box;
 }
 
-/* Sticky Header */
 .sticky-header {
   position: -webkit-sticky;
   position: sticky;
@@ -48,7 +45,6 @@ h1 {
   border-bottom: 1px solid #ccc;
 }
 
-/* Navigation Buttons and Dropdown */
 .navigation-buttons {
   display: flex;
   align-items: center;
@@ -64,7 +60,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 0 16px; /* Add margin to the left of the dropdown */
+  margin: 0 0 0 16px;
 }
 
 .reports-dropdown h3 {
@@ -73,19 +69,17 @@ h1 {
 }
 
 .reports-dropdown select {
-  width: auto; /* Remove fixed width */
-  min-width: 200px; /* Set minimum width */
+  width: auto;
+  min-width: 200px;
   padding: 5px;
   font-size: 0.9em;
 }
 
-/* Put buttons and dropdown in one line */
 .sticky-header .navigation-buttons,
 .sticky-header .reports-dropdown {
   display: inline-flex;
 }
 
-/* Dream Report Container */
 .report-container {
   display: flex;
   flex-direction: row;
@@ -110,28 +104,13 @@ h1 {
   font-size: 1em;
 }
 
-/* Sticky Header */
-.sticky-header {
-  position: sticky;
-  top: 0;
-  background-color: white;
-  z-index: 1000;
-  padding: 10px;
-  border-bottom: 1px solid #ccc;
-}
-
 #dream_report_title {
   margin: 8px 0;
   background-color: white;
 }
 
-/* Dynamic Scales */
 #dynamic_scales {
   margin-top: 20px;
-}
-
-#dynamic_scales {
-  
 }
 
 #dynamic_scales > div:has(> .group-container) {
@@ -159,8 +138,8 @@ h1 {
 }
 
 .group-container h3 {
-  font-size:1em;
-  font-weight:normal;
+  font-size: 1em;
+  font-weight: normal;
   margin: 0;
 }
 
@@ -172,21 +151,21 @@ h1 {
   white-space: nowrap;
   margin-left: auto;
 }
+
 .group-container .scales-grid-inner {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: inherit;
 }
-.rating-type-label{
-  font-weight:bold;
-  margin-bottom:8px;
-  display:block;
-}
 
 .rating-type-label {
-  position: relative; 
+  font-weight: bold;
+  margin-bottom: 8px;
+  display: block;
+  position: relative;
 }
+
 .rating-type-label:after {
   position: absolute;
   display: none;
@@ -198,14 +177,16 @@ h1 {
   max-width: 100%;
   left: 0;
   background: white;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
   opacity: 0;
   transition: opacity 0.2s;
 }
+
 .rating-type-label:hover:after {
   display: block;
   opacity: 1;
 }
+
 .rating-type-label--lastmin:hover:after {
   content: 'This applies to "last minute" only!';
 }
@@ -214,20 +195,32 @@ h1 {
   content: 'This applies to both "earlier" and "last minute"';
 }
 
-.rating-type-label rating-type-label--full{
-  /*if you want to add styling separately add it here*/
-}
-.rating-type-label rating-type-label--lastmin{
-  /*if you want to add styling separately add it here*/
-}
-
-.separated-scales{
-  display:grid;
-  gap:8px;
-  grid-template-columns:1fr 1fr;
-  margin-top:4px;
+.separated-scales {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 4px;
 }
 
-.scale-name{
-  font-size:1.2em;
+.scale-name {
+  font-size: 1.2em;
+}
+
+.domain-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #ccc;
+}
+
+.domain-label {
+  font-size: 0.85em;
+  color: #666;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.domain-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
 }

@@ -1,22 +1,19 @@
 <!DOCTYPE html>
-<html lang="en" >
-<head>
-  <meta charset="UTF-8">
-  <title>DreamRaterv2</title>
-  <link rel="stylesheet" href="./style.css">
+<html lang="en">
 
-</head>
-<body>
-<!-- partial:index.partial.html -->
-<div id="app">
-  <!-- App Title -->
+  <head>
+    <meta charset="UTF-8">
+    <title>DreamRaterv2</title>
+    <link rel="stylesheet" href="./style.css">
+
+  </head>
+    
+  <body>
+  <div id="app">
   <h1>DreamRater</h1>
 
-  <!-- Layout Container -->
   <div class="container">
-    <!-- Sidebar -->
     <div class="sidebar">
-      <!-- File Uploads -->
       <div>
         <h3>Upload Rating Scales File (.xlsx or .csv)</h3>
         <input type="file" @change="handleScaleFile" accept=".xlsx, .csv">
@@ -33,11 +30,8 @@
       </div>
     </div>
 
-    <!-- Main Content -->
     <div class="main-content">
-      <!-- When Reports are Loaded -->
       <div v-if="reportFileLoaded">
-        <!-- Sticky Header Start -->
         <div class="sticky-header">
           <div style="display: flex; align-items: center;">
             <div class="navigation-buttons">
@@ -55,7 +49,6 @@
             </div>
             <div class="save-message">{{ saveMessage }}</div>
           </div>
-          <!-- Dream Report Display -->
           <h4 id="dream_report_title">
             Currently Rating Report ID: {{ currentReport.ID || 'No report selected' }}
             <span> - {{ ratingStatus }}</span>
@@ -67,64 +60,78 @@
             </div>
           </div>
         </div>
-        <!-- Sticky Header End -->
 
-        <!-- Dynamic Scales -->
         <div id="dynamic_scales">
           <div v-for="(item, index) in renderedScales" :key="index">
+
             <!-- Grouped Scales -->
             <div v-if="item.isGroup" class="group-container">
               <h3>Group: {{ item.groupName }}</h3>
               <button @click="setGroupToZero(item.groupName)">Set Group {{ item.groupName }} to Zero</button>
               <div class="scales-grid-inner">
-                <div v-for="scale in item.scales" :key="scale.ScaleName" class="slider-container">
+                <div v-for="scale in item.scales" :key="scale.ScaleName" class="slider-container" v-show="isDependencySatisfied(scale)">
                   <h4 class="scale-name" :title="scale.Explanation">{{ scale.ScaleName }}</h4>
 
-                  <!-- Combined Rating Type -->
+                  <!-- Combined -->
                   <div v-if="scale.RatingType === 'combined' && hasLastMinutePortion">
                     <div v-for="option in getCombinedOptions()" :key="option.value">
-                      <label>
-                        <input type="radio" :name="'combined-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.combined[scale.ScaleName]">
-                        {{ option.label }}
-                      </label>
+                      <label><input type="radio" :name="'combined-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.combined[scale.ScaleName]"> {{ option.label }}</label>
                     </div>
                   </div>
-                  <!-- Combined Binary Rating Type -->
+
+                  <!-- Combined Binary -->
                   <div v-else-if="scale.RatingType === 'combinedBinary' && hasLastMinutePortion">
-                    <!-- First the combined radio options -->
                     <div class="combined-options">
                       <div v-for="option in getCombinedOptions()" :key="option.value">
-                        <label>
-                          <input type="radio" :name="'combined-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.combined[scale.ScaleName]">
-                          {{ option.label }}
-                        </label>
+                        <label><input type="radio" :name="'combined-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.combined[scale.ScaleName]"> {{ option.label }}</label>
                       </div>
                     </div>
-                    <!-- Then the additional checkbox -->
                     <div class="binary-flag">
-                      <label>
-                        <input type="checkbox" v-model="scaleInputs.binaryFlags[scale.ScaleName]" @change="handleBinaryCheckboxChange(scale.ScaleName)">
-                        Dream Person is Eating
-                      </label>
+                      <label><input type="checkbox" v-model="scaleInputs.binaryFlags[scale.ScaleName]" @change="handleBinaryCheckboxChange(scale.ScaleName)"> Dream Person is Eating</label>
                     </div>
                   </div>
-                  <!-- Main Only Rating Type -->
+
+                  <!-- Main Only -->
                   <div class="rating-type-both" v-else-if="scale.RatingType === 'mainOnly' && hasLastMinutePortion">
                     <div v-if="scale.ScaleType === 'Radio'">
                       <div v-for="(option, idx) in parseOptions(scale.Options)" :key="idx">
-                        <label>
-                          <input type="radio" :name="'main-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.main[scale.ScaleName]">
-                          {{ option.label }}
-                        </label>
+                        <label><input type="radio" :name="'main-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.main[scale.ScaleName]"> {{ option.label }}</label>
                       </div>
                     </div>
                     <div v-else-if="scale.ScaleType === 'Numeric'">
                       <label>Number in full dream:</label>
                       <input type="number" v-model.number="scaleInputs.main[scale.ScaleName]">
                     </div>
+                    <div v-else-if="scale.ScaleType === 'Checkbox'">
+                      <div v-for="(option, idx) in parseOptions(scale.Options)" :key="idx">
+                        <label><input type="checkbox" :value="option.value"
+                          :checked="Array.isArray(scaleInputs.main[scale.ScaleName]) && scaleInputs.main[scale.ScaleName].includes(option.value)"
+                          @change="toggleCheckbox(scale.ScaleName, option.value)"> {{ option.label }}</label>
+                      </div>
+                    </div>
+                    <div v-if="scale.domainScale && showSubSection(scale.ScaleName)" class="domain-section">
+                      <span class="domain-label">Domain(s):</span>
+                      <div class="domain-options">
+                        <div v-for="(option, idx) in parseOptions(scale.domainScale.Options)" :key="idx">
+                          <label><input type="checkbox" :value="option.value"
+                            :checked="Array.isArray(scaleInputs.main[scale.domainScale.ScaleName]) && scaleInputs.main[scale.domainScale.ScaleName].includes(option.value)"
+                            @change="toggleCheckbox(scale.domainScale.ScaleName, option.value)"> {{ option.label }}</label>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="scale.typeScale && showSubSection(scale.ScaleName)" class="domain-section">
+                      <span class="domain-label">Type(s):</span>
+                      <div class="domain-options">
+                        <div v-for="(option, idx) in parseOptions(scale.typeScale.Options)" :key="idx">
+                          <label><input type="checkbox" :value="option.value"
+                            :checked="Array.isArray(scaleInputs.main[scale.typeScale.ScaleName]) && scaleInputs.main[scale.typeScale.ScaleName].includes(option.value)"
+                            @change="toggleCheckbox(scale.typeScale.ScaleName, option.value)"> {{ option.label }}</label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <!-- Count to Binary Rating Type -->
+                  <!-- Count to Binary -->
                   <div v-else-if="scale.RatingType === 'countToBinary' && hasLastMinutePortion">
                     <div>
                       <label>Number in full dream:</label>
@@ -136,16 +143,13 @@
                     </div>
                   </div>
 
-                  <!-- Separate Rating Type -->
+                  <!-- Separate -->
                   <div class="separated-scales" v-else-if="scale.RatingType === 'separate' && hasLastMinutePortion">
                     <div>
                       <label class="rating-type-label rating-type-label--full">Full Dream:</label>
                       <div v-if="scale.ScaleType === 'Radio'">
                         <div v-for="(option, idx) in parseOptions(scale.Options)" :key="idx">
-                          <label>
-                            <input type="radio" :name="'main-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.main[scale.ScaleName]">
-                            {{ option.label }}
-                          </label>
+                          <label><input type="radio" :name="'main-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.main[scale.ScaleName]"> {{ option.label }}</label>
                         </div>
                       </div>
                       <input v-else-if="scale.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.main[scale.ScaleName]">
@@ -154,65 +158,108 @@
                       <label class="rating-type-label rating-type-label--lastmin">Last Minute:</label>
                       <div v-if="scale.ScaleType === 'Radio'">
                         <div v-for="(option, idx) in parseOptions(scale.Options)" :key="idx">
-                          <label>
-                            <input type="radio" :name="'lastMinute-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.lastMinute[scale.ScaleName]">
-                            {{ option.label }}
-                          </label>
+                          <label><input type="radio" :name="'lastMinute-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.lastMinute[scale.ScaleName]"> {{ option.label }}</label>
                         </div>
                       </div>
                       <input v-else-if="scale.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.lastMinute[scale.ScaleName]">
                     </div>
                   </div>
 
-                  <!-- Default Single Rating (for single dream reports) -->
+                  <!-- Default -->
                   <div v-else>
                     <div v-if="scale.ScaleType === 'Radio'">
                       <div v-for="(option, idx) in parseOptions(scale.Options)" :key="idx">
-                        <label>
-                          <input type="radio" :name="'main-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.main[scale.ScaleName]">
-                          {{ option.label }}
-                        </label>
+                        <label><input type="radio" :name="'main-'+scale.ScaleName" :value="option.value" v-model="scaleInputs.main[scale.ScaleName]"> {{ option.label }}</label>
                       </div>
                     </div>
                     <input v-else-if="scale.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.main[scale.ScaleName]">
+                    <div v-else-if="scale.ScaleType === 'Checkbox'">
+                      <div v-for="(option, idx) in parseOptions(scale.Options)" :key="idx">
+                        <label><input type="checkbox" :value="option.value"
+                          :checked="Array.isArray(scaleInputs.main[scale.ScaleName]) && scaleInputs.main[scale.ScaleName].includes(option.value)"
+                          @change="toggleCheckbox(scale.ScaleName, option.value)"> {{ option.label }}</label>
+                      </div>
+                    </div>
+                    <div v-if="scale.domainScale && showSubSection(scale.ScaleName)" class="domain-section">
+                      <span class="domain-label">Domain(s):</span>
+                      <div class="domain-options">
+                        <div v-for="(option, idx) in parseOptions(scale.domainScale.Options)" :key="idx">
+                          <label><input type="checkbox" :value="option.value"
+                            :checked="Array.isArray(scaleInputs.main[scale.domainScale.ScaleName]) && scaleInputs.main[scale.domainScale.ScaleName].includes(option.value)"
+                            @change="toggleCheckbox(scale.domainScale.ScaleName, option.value)"> {{ option.label }}</label>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="scale.typeScale && showSubSection(scale.ScaleName)" class="domain-section">
+                      <span class="domain-label">Type(s):</span>
+                      <div class="domain-options">
+                        <div v-for="(option, idx) in parseOptions(scale.typeScale.Options)" :key="idx">
+                          <label><input type="checkbox" :value="option.value"
+                            :checked="Array.isArray(scaleInputs.main[scale.typeScale.ScaleName]) && scaleInputs.main[scale.typeScale.ScaleName].includes(option.value)"
+                            @change="toggleCheckbox(scale.typeScale.ScaleName, option.value)"> {{ option.label }}</label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+
                 </div>
               </div>
             </div>
 
-            <!-- Ungrouped Scales (same structure as above but for individual scales) -->
-            <div v-else class="slider-container">
+            <!-- Ungrouped Scales -->
+            <div v-else class="slider-container" v-show="isDependencySatisfied(item)">
               <div class="scales-grid-inner">
                 <h4 class="scale-name" :title="item.Explanation">{{ item.ScaleName }}</h4>
 
-                <!-- Combined Rating Type -->
+                <!-- Combined -->
                 <div v-if="item.RatingType === 'combined' && hasLastMinutePortion">
                   <div v-for="option in getCombinedOptions()" :key="option.value">
-                    <label>
-                      <input type="radio" :name="'combined-'+item.ScaleName" :value="option.value" v-model="scaleInputs.combined[item.ScaleName]">
-                      {{ option.label }}
-                    </label>
+                    <label><input type="radio" :name="'combined-'+item.ScaleName" :value="option.value" v-model="scaleInputs.combined[item.ScaleName]"> {{ option.label }}</label>
                   </div>
                 </div>
-                
-                <!-- Main Only Rating Type -->
+
+                <!-- Main Only -->
                 <div class="rating-type-both" v-else-if="item.RatingType === 'mainOnly' && hasLastMinutePortion">
                   <label class="rating-type-label rating-type-label--full">Full Dream:</label>
                   <div v-if="item.ScaleType === 'Radio'">
                     <div v-for="(option, idx) in parseOptions(item.Options)" :key="idx">
-                      <label>
-                        <input type="radio" :name="'main-'+item.ScaleName" :value="option.value" v-model="scaleInputs.main[item.ScaleName]">
-                        {{ option.label }}
-                      </label>
+                      <label><input type="radio" :name="'main-'+item.ScaleName" :value="option.value" v-model="scaleInputs.main[item.ScaleName]"> {{ option.label }}</label>
                     </div>
                   </div>
                   <div v-else-if="item.ScaleType === 'Numeric'">
                     <label>Number in full dream:</label>
                     <input type="number" v-model.number="scaleInputs.main[item.ScaleName]">
                   </div>
+                  <div v-else-if="item.ScaleType === 'Checkbox'">
+                    <div v-for="(option, idx) in parseOptions(item.Options)" :key="idx">
+                      <label><input type="checkbox" :value="option.value"
+                        :checked="Array.isArray(scaleInputs.main[item.ScaleName]) && scaleInputs.main[item.ScaleName].includes(option.value)"
+                        @change="toggleCheckbox(item.ScaleName, option.value)"> {{ option.label }}</label>
+                    </div>
+                  </div>
+                  <div v-if="item.domainScale && showSubSection(item.ScaleName)" class="domain-section">
+                    <span class="domain-label">Domain(s):</span>
+                    <div class="domain-options">
+                      <div v-for="(option, idx) in parseOptions(item.domainScale.Options)" :key="idx">
+                        <label><input type="checkbox" :value="option.value"
+                          :checked="Array.isArray(scaleInputs.main[item.domainScale.ScaleName]) && scaleInputs.main[item.domainScale.ScaleName].includes(option.value)"
+                          @change="toggleCheckbox(item.domainScale.ScaleName, option.value)"> {{ option.label }}</label>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-if="item.typeScale && showSubSection(item.ScaleName)" class="domain-section">
+                    <span class="domain-label">Type(s):</span>
+                    <div class="domain-options">
+                      <div v-for="(option, idx) in parseOptions(item.typeScale.Options)" :key="idx">
+                        <label><input type="checkbox" :value="option.value"
+                          :checked="Array.isArray(scaleInputs.main[item.typeScale.ScaleName]) && scaleInputs.main[item.typeScale.ScaleName].includes(option.value)"
+                          @change="toggleCheckbox(item.typeScale.ScaleName, option.value)"> {{ option.label }}</label>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <!-- Count to Binary Rating Type -->
+                <!-- Count to Binary -->
                 <div v-else-if="item.RatingType === 'countToBinary' && hasLastMinutePortion">
                   <div>
                     <label>Number in full dream:</label>
@@ -224,16 +271,13 @@
                   </div>
                 </div>
 
-                <!-- Separate Rating Type -->
+                <!-- Separate -->
                 <div class="separated-scales" v-else-if="item.RatingType === 'separate' && hasLastMinutePortion">
                   <div>
                     <label class="rating-type-label rating-type-label--full">Full Dream:</label>
                     <div v-if="item.ScaleType === 'Radio'">
                       <div v-for="(option, idx) in parseOptions(item.Options)" :key="idx">
-                        <label>
-                          <input type="radio" :name="'main-'+item.ScaleName" :value="option.value" v-model="scaleInputs.main[item.ScaleName]">
-                          {{ option.label }}
-                        </label>
+                        <label><input type="radio" :name="'main-'+item.ScaleName" :value="option.value" v-model="scaleInputs.main[item.ScaleName]"> {{ option.label }}</label>
                       </div>
                     </div>
                     <input v-else-if="item.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.main[item.ScaleName]">
@@ -242,41 +286,63 @@
                     <label class="rating-type-label rating-type-label--lastmin">Last Minute:</label>
                     <div v-if="item.ScaleType === 'Radio'">
                       <div v-for="(option, idx) in parseOptions(item.Options)" :key="idx">
-                        <label>
-                          <input type="radio" :name="'lastMinute-'+item.ScaleName" :value="option.value" v-model="scaleInputs.lastMinute[item.ScaleName]">
-                          {{ option.label }}
-                        </label>
+                        <label><input type="radio" :name="'lastMinute-'+item.ScaleName" :value="option.value" v-model="scaleInputs.main[item.ScaleName]"> {{ option.label }}</label>
                       </div>
                     </div>
-                    <input v-else-if="item.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.lastMinute[item.ScaleName]">
+                    <input v-else-if="item.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.main[item.ScaleName]">
                   </div>
                 </div>
 
-                <!-- Default Single Rating (for single dream reports) -->
+                <!-- Default -->
                 <div v-else>
                   <div v-if="item.ScaleType === 'Radio'">
                     <div v-for="(option, idx) in parseOptions(item.Options)" :key="idx">
-                      <label>
-                        <input type="radio" :name="'main-'+item.ScaleName" :value="option.value" v-model="scaleInputs.main[item.ScaleName]">
-                        {{ option.label }}
-                      </label>
+                      <label><input type="radio" :name="'main-'+item.ScaleName" :value="option.value" v-model="scaleInputs.main[item.ScaleName]"> {{ option.label }}</label>
                     </div>
                   </div>
                   <input v-else-if="item.ScaleType === 'Numeric'" type="number" v-model.number="scaleInputs.main[item.ScaleName]">
+                  <div v-else-if="item.ScaleType === 'Checkbox'">
+                    <div v-for="(option, idx) in parseOptions(item.Options)" :key="idx">
+                      <label><input type="checkbox" :value="option.value"
+                        :checked="Array.isArray(scaleInputs.main[item.ScaleName]) && scaleInputs.main[item.ScaleName].includes(option.value)"
+                        @change="toggleCheckbox(item.ScaleName, option.value)"> {{ option.label }}</label>
+                    </div>
+                  </div>
+                  <div v-if="item.domainScale && showSubSection(item.ScaleName)" class="domain-section">
+                    <span class="domain-label">Domain(s):</span>
+                    <div class="domain-options">
+                      <div v-for="(option, idx) in parseOptions(item.domainScale.Options)" :key="idx">
+                        <label><input type="checkbox" :value="option.value"
+                          :checked="Array.isArray(scaleInputs.main[item.domainScale.ScaleName]) && scaleInputs.main[item.domainScale.ScaleName].includes(option.value)"
+                          @change="toggleCheckbox(item.domainScale.ScaleName, option.value)"> {{ option.label }}</label>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-if="item.typeScale && showSubSection(item.ScaleName)" class="domain-section">
+                    <span class="domain-label">Type(s):</span>
+                    <div class="domain-options">
+                      <div v-for="(option, idx) in parseOptions(item.typeScale.Options)" :key="idx">
+                        <label><input type="checkbox" :value="option.value"
+                          :checked="Array.isArray(scaleInputs.main[item.typeScale.ScaleName]) && scaleInputs.main[item.typeScale.ScaleName].includes(option.value)"
+                          @change="toggleCheckbox(item.typeScale.ScaleName, option.value)"> {{ option.label }}</label>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
               </div>
             </div>
+
           </div>
         </div>
       </div>
     </div>
-
   </div>
 </div>
-<!-- partial -->
-  <script src='https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js'></script>
 <script src='https://unpkg.com/vue@2'></script><script  src="./script.js"></script>
 
-</body>
+  </body>
+  
 </html>
